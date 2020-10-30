@@ -9,6 +9,10 @@
 #define OK_RESPONSE_SIZE 4
 #define TIMEOUT 100
 #define MINIMAL_SET_SERIAL_PARAMETER_LENGTH 30
+#define PIN_LENGTH 4
+#define GET_PASSWORD_COMMAND_RESPONSE_LENGTH 17
+#define SET_PASSWORD_COMMAND_LENGTH 14
+#define GET_NAME_RESPONSE_SIZE 20
 
 static const char* OK_RESPONSE = "OK\r\n";
 
@@ -20,6 +24,81 @@ struct bluetooth_handler_t
 bluetooth_receivedDataBuffer bluetooth_interruptBuffer = {.isDataReady = false, .dataEnd = 0};
 
 /** Static Functions -------------------------------------------------------- */
+static bool startsWith(char* word, char* pattern)
+{
+	int i = -1;
+	while(pattern[++i] != '\0')
+	{
+		if(word[i] != pattern[i])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static bool endsWith(char* word, char* pattern)
+{
+	const uint8_t wordLength = strlen(word);
+	const uint8_t patternLength = strlen(pattern);
+
+	// we start at the end of both words
+	int8_t i_pattern = patternLength - 1;
+	int8_t i_word = wordLength - 1;
+
+	while(i_pattern >= 0)
+	{
+		// we compare if chars are the same
+		if(pattern[i_pattern] != word[i_word])
+		{
+			return false;
+		}
+
+		--i_pattern;
+		--i_word;
+	}
+
+	return true;
+}
+
+static bool getModuleNameFromResponse(char* response, char* password)
+{
+	/*Response format is: +NAME:<Param>
+	 * First index of name is 6
+	 * */
+
+	// TODO: Finish this function
+	return true;
+}
+
+static bool isGetNameResponseCorrect(char* response)
+{
+	// TODO: FINISH THIS FUNCTION
+	return true;
+}
+
+static bool isPasswordResponseCorrect(char* response)
+{
+	if(startsWith(response, "+PIN:\"") && endsWith(response, "OK\r\n"))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+static void getPasswordFromResponse(char *response, char *password)
+{
+	// pin starts from seventh byte and pin is 4 bytes long
+	password[0] = response[6];
+	password[1] = response[7];
+	password[2] = response[8];
+	password[3] = response[9];
+}
+
 static bool isBluetoothResponseCorrect(char* response)
 {
 	int responseLength = strlen(response);
@@ -302,5 +381,91 @@ Bluetooth_response bluetooth_readMessage_IT(bluetooth_handler_t *bluetooth, uint
 	else
 	{
 		return BLUETOOTH_FAIL;
+	}
+}
+
+Bluetooth_response bluetooth_getName(bluetooth_handler_t *bluetooth, char* name)
+{
+	assert(bluetooth);
+	assert(name);
+
+	char* getModuleName = "AT+NAME\r\n";
+	HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)getModuleName, strlen(getModuleName), TIMEOUT);
+
+	char response[GET_NAME_RESPONSE_SIZE + 1];
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)response, sizeof(response), TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	response[GET_NAME_RESPONSE_SIZE] = '\0';
+
+	if(isGetNameResponseCorrect(response))
+	{
+		getModuleNameFromResponse(response, name);
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
+	}
+}
+Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth, char* name)
+{
+	return BLUETOOTH_OK;
+}
+
+Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* password)
+{
+	assert(bluetooth);
+	assert(password);
+
+	char* getPasswordCommand = "AT+PSWD\r\n";
+	HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)getPasswordCommand, strlen(getPasswordCommand), TIMEOUT);
+
+	char response[GET_PASSWORD_COMMAND_RESPONSE_LENGTH + 1];
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)response, GET_PASSWORD_COMMAND_RESPONSE_LENGTH, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	response[GET_PASSWORD_COMMAND_RESPONSE_LENGTH] = '\0'; // to be sure it's null-terminated when passing to function expecting it to be null-terminated
+
+	if(isPasswordResponseCorrect(response))
+	{
+		getPasswordFromResponse(response, password);
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
+	}
+}
+Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* password)
+{
+	assert(bluetooth);
+	assert(password);
+	assert(strlen(password) == PIN_LENGTH);
+
+	char setPasswordCommand[SET_PASSWORD_COMMAND_LENGTH + 1];
+
+	int writtenChars = sprintf(setPasswordCommand, "AT+PSWD=\"%s\"\r\n", password);
+
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)setPasswordCommand, writtenChars, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	char bluetoothResponse[OK_RESPONSE_SIZE + 1];
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)bluetoothResponse, OK_RESPONSE_SIZE, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	if(strcmp(bluetoothResponse, OK_RESPONSE) != 0)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	else
+	{
+		return BLUETOOTH_OK;
 	}
 }

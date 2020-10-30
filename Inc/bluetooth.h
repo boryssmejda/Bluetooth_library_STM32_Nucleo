@@ -67,10 +67,10 @@ Bluetooth_response bluetooth_sendMessage_IT(bluetooth_handler_t *bluetooth, char
 Bluetooth_response bluetooth_readMessage(bluetooth_handler_t *bluetooth, char* message, uint32_t maxMessageLength, uint32_t timeout);
 Bluetooth_response bluetooth_readMessage_IT(bluetooth_handler_t *bluetooth, uint32_t messageLength);
 
-Bluetooth_response bluetooth_getName(bluetooth_handler_t *bluetooth);
-Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth);
+Bluetooth_response bluetooth_getName(bluetooth_handler_t *bluetooth, char* name);
+Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth, char* name);
 
-Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth);
-Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth);
+Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* password);
+Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* password);
 
 #endif
