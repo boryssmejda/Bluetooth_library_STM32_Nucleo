@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #define BLUETOOTH_RECEIVED_DATA_BUFFER 20
+#define BLUETOOTH_ADDRESS_LENGTH 17
 
 enum Bluetooth_response
 {
@@ -26,19 +27,6 @@ enum Bluetooth_parity
 	PARITY_NONE = 0,
 	PARITY_ODD = 1,
 	PARITY_EVEN = 2
-};
-
-enum Bluetooth_moduleWorkingState
-{
-	BLUETOOTH_INITIALIZED,
-	BLUETOOTH_READY,
-	BLUETOOTH_PAIRABLE,
-	BLUETOOTH_PAIRED,
-	BLUETOOTH_INQUIRING,
-	BLUETOOTH_CONNECTING,
-	BLUETOOTH_CONNECTED,
-	BLUETOOTH_DISCONNECTED,
-	BLUETOOTH_UNKNOWN
 };
 
 typedef struct
@@ -76,7 +64,7 @@ Bluetooth_response bluetooth_getSerialParameters(bluetooth_handler_t *bluetooth,
 Bluetooth_response bluetooth_restoreDefaultSettings(bluetooth_handler_t *bluetooth);
 Bluetooth_response bluetooth_reset(bluetooth_handler_t *bluetooth);
 
-Bluetooth_response bluetooth_sendMessage(bluetooth_handler_t *bluetooth, char* message);
+Bluetooth_response bluetooth_sendMessage(bluetooth_handler_t *bluetooth, char* message, uint32_t timeout);
 Bluetooth_response bluetooth_sendMessage_IT(bluetooth_handler_t *bluetooth, char* message);
 
 Bluetooth_response bluetooth_readMessage(bluetooth_handler_t *bluetooth, char* message, uint32_t maxMessageLength, uint32_t timeout);
@@ -88,6 +76,6 @@ Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth, char* name)
 Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* password);
 Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* password);
 
-//Bluetooth_response bluetooth_getModuleWorkingState(bluetooth_handler_t *bluetooth, )
+Bluetooth_response bluetooth_getModuleAddress(bluetooth_handler_t *bluetooth, char moduleAddress[BLUETOOTH_ADDRESS_LENGTH + 1]);
 
 #endif

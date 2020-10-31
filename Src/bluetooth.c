@@ -13,6 +13,7 @@
 #define GET_PASSWORD_COMMAND_RESPONSE_LENGTH 17
 #define SET_PASSWORD_COMMAND_LENGTH 14
 #define GET_NAME_RESPONSE_SIZE 30
+#define BLUETOOTH_MODULE_ADDRESS_RESPONSE 26
 
 static const char* OK_RESPONSE = "OK\r\n";
 
@@ -77,6 +78,53 @@ static void copyUntil(char* src, char* dst, uint8_t begin, char desiredChar)
 	while(src[i] != '\0' && src[i] != desiredChar)
 	{
 		dst[dstIndex++] = src[i++];
+	}
+}
+
+static void getAddressFromResponse(char* response, char moduleAddress[BLUETOOTH_ADDRESS_LENGTH + 1])
+{
+	uint8_t colonPos = findPosOf(response, ':');
+
+	moduleAddress[0] = response[colonPos];
+	moduleAddress[1] = response[colonPos + 1];
+
+	moduleAddress[2] = ':';
+
+	moduleAddress[3] = response[colonPos + 2];
+	moduleAddress[4] = response[colonPos + 3];
+
+	moduleAddress[5] = ':';
+
+	moduleAddress[6] = response[colonPos + 5];
+	moduleAddress[7] = response[colonPos + 6];
+
+	moduleAddress[8] = ':';
+
+	moduleAddress[9] = response[colonPos + 8];
+	moduleAddress[10] = response[colonPos + 9];
+
+	moduleAddress[11] = ':';
+
+	moduleAddress[12] = response[colonPos + 10];
+	moduleAddress[13] = response[colonPos + 11];
+
+	moduleAddress[14] = ':';
+
+	moduleAddress[15] = response[colonPos + 12];
+	moduleAddress[16] = response[colonPos + 13];
+
+	// Finally we should get address in form: ab:cd:12:34:fg:23
+}
+
+static bool isModuleAddressCorrect(char address[BLUETOOTH_MODULE_ADDRESS_RESPONSE + 1])
+{
+	if(startsWith(address, "+ADDR:"))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -375,14 +423,14 @@ Bluetooth_response bluetooth_reset(bluetooth_handler_t *bluetooth)
 	}
 }
 
-Bluetooth_response bluetooth_sendMessage(bluetooth_handler_t *bluetooth, char* message)
+Bluetooth_response bluetooth_sendMessage(bluetooth_handler_t *bluetooth, char* message, uint32_t timeout)
 {
 	assert(bluetooth);
 	assert(message);
 
 	uint8_t messageLength = strlen(message);
 
-	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)message, messageLength, TIMEOUT) == HAL_OK)
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)message, messageLength, timeout) == HAL_OK)
 	{
 		return BLUETOOTH_OK;
 	}
@@ -559,5 +607,33 @@ Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* p
 	else
 	{
 		return BLUETOOTH_OK;
+	}
+}
+
+Bluetooth_response bluetooth_getModuleAddress(bluetooth_handler_t *bluetooth, char moduleAddress[BLUETOOTH_ADDRESS_LENGTH + 1])
+{
+	char* bluetoothModuleAddressCommand = "AT+ADDR?\r\n";
+
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)bluetoothModuleAddressCommand, strlen(bluetoothModuleAddressCommand), TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	char moduleBluetoothResponse[BLUETOOTH_MODULE_ADDRESS_RESPONSE + 1];
+
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)moduleBluetoothResponse, BLUETOOTH_MODULE_ADDRESS_RESPONSE, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	moduleBluetoothResponse[BLUETOOTH_MODULE_ADDRESS_RESPONSE] = '\0';
+
+	if(isModuleAddressCorrect(moduleBluetoothResponse))
+	{
+		getAddressFromResponse(moduleBluetoothResponse, moduleAddress);
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
 	}
 }
