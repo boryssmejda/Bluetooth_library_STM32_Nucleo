@@ -12,7 +12,7 @@
 #define PIN_LENGTH 4
 #define GET_PASSWORD_COMMAND_RESPONSE_LENGTH 17
 #define SET_PASSWORD_COMMAND_LENGTH 14
-#define GET_NAME_RESPONSE_SIZE 20
+#define GET_NAME_RESPONSE_SIZE 30
 
 static const char* OK_RESPONSE = "OK\r\n";
 
@@ -62,20 +62,45 @@ static bool endsWith(char* word, char* pattern)
 	return true;
 }
 
-static bool getModuleNameFromResponse(char* response, char* password)
+static uint8_t findPosOf(char* str, char ch)
 {
-	/*Response format is: +NAME:<Param>
-	 * First index of name is 6
+	uint8_t i = 0;
+	while(str[i] != '\0' && str[i++] != ch);
+
+	return i;
+}
+
+static void copyUntil(char* src, char* dst, uint8_t begin, char desiredChar)
+{
+	uint8_t i = begin;
+	uint8_t dstIndex = 0;
+	while(src[i] != '\0' && src[i] != desiredChar)
+	{
+		dst[dstIndex++] = src[i++];
+	}
+}
+
+static void getModuleNameFromResponse(char* response, char* name)
+{
+	/*Response format is: +NAME:<Param>\r\nOK\r\n
+	 * So we first have to find position of colon
+	 * Then we traverse array and copy chars into name until we find \r
 	 * */
 
-	// TODO: Finish this function
-	return true;
+	uint8_t responseIndex = findPosOf(response, ':');
+	copyUntil(response, name, responseIndex, '\r');
 }
 
 static bool isGetNameResponseCorrect(char* response)
 {
-	// TODO: FINISH THIS FUNCTION
-	return true;
+	if(startsWith(response, "+NAME:"))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 static bool isPasswordResponseCorrect(char* response)
@@ -393,11 +418,17 @@ Bluetooth_response bluetooth_getName(bluetooth_handler_t *bluetooth, char* name)
 	HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)getModuleName, strlen(getModuleName), TIMEOUT);
 
 	char response[GET_NAME_RESPONSE_SIZE + 1];
-	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)response, sizeof(response), TIMEOUT) != HAL_OK)
+	uint8_t responseIndex = -1;
+	char ch;
+	while(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)&ch, 1, TIMEOUT) != HAL_TIMEOUT)
 	{
-		return BLUETOOTH_FAIL;
+		response[++responseIndex] = ch;
+		if(responseIndex == GET_NAME_RESPONSE_SIZE)
+		{
+			return BLUETOOTH_FAIL;
+		}
 	}
-	response[GET_NAME_RESPONSE_SIZE] = '\0';
+	response[responseIndex + 1] = '\0';
 
 	if(isGetNameResponseCorrect(response))
 	{
@@ -411,7 +442,30 @@ Bluetooth_response bluetooth_getName(bluetooth_handler_t *bluetooth, char* name)
 }
 Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth, char* name)
 {
-	return BLUETOOTH_OK;
+	assert(bluetooth);
+	assert(name);
+	assert(strlen(name) > 0);
+
+	char setNameCommand[GET_NAME_RESPONSE_SIZE + 1];
+	uint8_t writtenChars = sprintf(setNameCommand, "AT+NAME=\"%s\"\r\n", name);
+
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)setNameCommand, writtenChars, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	char setNameResponse[OK_RESPONSE_SIZE + 1];
+	HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)setNameResponse, OK_RESPONSE_SIZE, TIMEOUT);
+	setNameResponse[OK_RESPONSE_SIZE] = '\0';
+
+	if(strcmp(setNameResponse, OK_RESPONSE) != 0)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	else
+	{
+		return BLUETOOTH_OK;
+	}
 }
 
 Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* password)
