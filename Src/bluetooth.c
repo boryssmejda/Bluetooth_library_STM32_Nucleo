@@ -14,6 +14,7 @@
 #define SET_PASSWORD_COMMAND_LENGTH 14
 #define GET_NAME_RESPONSE_SIZE 30
 #define BLUETOOTH_MODULE_ADDRESS_RESPONSE 26
+#define BLUETOOTH_MODULE_ROLE_RESPONSE_LENGTH 13
 
 static const char* OK_RESPONSE = "OK\r\n";
 
@@ -78,6 +79,42 @@ static void copyUntil(char* src, char* dst, uint8_t begin, char desiredChar)
 	while(src[i] != '\0' && src[i] != desiredChar)
 	{
 		dst[dstIndex++] = src[i++];
+	}
+}
+
+static void getRoleFromResponse(char* response, Bluetooth_moduleRole* role)
+{
+	assert(response);
+	assert(role);
+	// response format is: +ROLE:<Param>\r\nOK\r\n
+	// So the role is on the sixth position
+
+	switch(response[6])
+	{
+	case '0':
+		*role = BLUETOOTH_SLAVE_ROLE;
+		break;
+	case '1':
+		*role = BLUETOOTH_MASTER_ROLE;
+		break;
+	case '2':
+		*role = BLUETOOTH_SLAVE_LOOP_ROLE;
+		break;
+	default:
+		*role = BLUETOOTH_UNKNOWN_ROLE;
+		break;
+	}
+}
+
+static bool isModuleRoleCorrect(char* moduleRole)
+{
+	if(startsWith(moduleRole, "+ROLE:"))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -283,7 +320,7 @@ Bluetooth_response bluetooth_pingDevice(bluetooth_handler_t* bluetooth)
 	char response[OK_RESPONSE_SIZE + 1];
 	response[OK_RESPONSE_SIZE] = '\0';
 
-	HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)response, sizeof(response), timeout);
+	HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)response, OK_RESPONSE_SIZE, timeout);
 
 	if(strcmp(response, OK_RESPONSE) == 0)
 	{
@@ -630,6 +667,34 @@ Bluetooth_response bluetooth_getModuleAddress(bluetooth_handler_t *bluetooth, ch
 	if(isModuleAddressCorrect(moduleBluetoothResponse))
 	{
 		getAddressFromResponse(moduleBluetoothResponse, moduleAddress);
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
+	}
+}
+
+Bluetooth_response bluetooth_getModuleRole(bluetooth_handler_t *bluetooth, Bluetooth_moduleRole* moduleRole)
+{
+	char* moduleRoleCommand = "AT+ROLE\r\n";
+
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)moduleRoleCommand, strlen(moduleRoleCommand), TIMEOUT + 1000) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	char moduleRoleResponse[BLUETOOTH_MODULE_ROLE_RESPONSE_LENGTH + 1];
+
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)moduleRoleResponse, BLUETOOTH_MODULE_ROLE_RESPONSE_LENGTH, TIMEOUT + 1000) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	moduleRoleResponse[BLUETOOTH_MODULE_ROLE_RESPONSE_LENGTH] = '\0';
+
+	if(isModuleRoleCorrect(moduleRoleResponse))
+	{
+		getRoleFromResponse(moduleRoleResponse, moduleRole);
 		return BLUETOOTH_OK;
 	}
 	else

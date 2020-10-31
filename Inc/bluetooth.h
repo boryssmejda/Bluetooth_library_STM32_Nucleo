@@ -29,6 +29,14 @@ enum Bluetooth_parity
 	PARITY_EVEN = 2
 };
 
+enum Bluetooth_moduleRole
+{
+	BLUETOOTH_SLAVE_ROLE,
+	BLUETOOTH_MASTER_ROLE,
+	BLUETOOTH_SLAVE_LOOP_ROLE,
+	BLUETOOTH_UNKNOWN_ROLE
+};
+
 typedef struct
 {
 	uint32_t baudRate: 28;
@@ -46,7 +54,7 @@ typedef struct
 typedef enum Bluetooth_response Bluetooth_response;
 typedef enum Bluetooth_stopBit Bluetooth_stopBit;
 typedef enum Bluetooth_parity Bluetooth_parity;
-typedef enum Bluetooth_moduleWorkingState Bluetooth_moduleWorkingState;
+typedef enum Bluetooth_moduleRole Bluetooth_moduleRole;
 
 typedef struct bluetooth_handler_t bluetooth_handler_t;
 
@@ -77,5 +85,6 @@ Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* p
 Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* password);
 
 Bluetooth_response bluetooth_getModuleAddress(bluetooth_handler_t *bluetooth, char moduleAddress[BLUETOOTH_ADDRESS_LENGTH + 1]);
+Bluetooth_response bluetooth_getModuleRole(bluetooth_handler_t *bluetooth, Bluetooth_moduleRole* moduleRole);
 
 #endif
