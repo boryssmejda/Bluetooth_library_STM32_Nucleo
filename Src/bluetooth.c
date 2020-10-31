@@ -494,6 +494,23 @@ Bluetooth_response bluetooth_sendMessage_IT(bluetooth_handler_t *bluetooth, char
 	}
 }
 
+Bluetooth_response bluetooth_sendMessage_DMA(bluetooth_handler_t *bluetooth, char* message)
+{
+	assert(bluetooth);
+	assert(message);
+
+	uint8_t length = strlen(message);
+
+	if(HAL_UART_Transmit_DMA(bluetooth->uart_handler, (uint8_t*)message, length) == HAL_OK)
+	{
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
+	}
+}
+
 Bluetooth_response bluetooth_readMessage(bluetooth_handler_t *bluetooth, char* message, uint32_t maxMessageLength, uint32_t timeout)
 {
 	assert(bluetooth);
@@ -523,6 +540,23 @@ Bluetooth_response bluetooth_readMessage_IT(bluetooth_handler_t *bluetooth, uint
 	bluetooth_interruptBuffer.dataEnd = messageLength;
 
 	if(HAL_UART_Receive_IT(bluetooth->uart_handler, (uint8_t*)bluetooth_interruptBuffer.receivedData, messageLength) == HAL_OK)
+	{
+		return BLUETOOTH_OK;
+	}
+	else
+	{
+		return BLUETOOTH_FAIL;
+	}
+}
+
+Bluetooth_response bluetooth_readMessage_DMA(bluetooth_handler_t *bluetooth, uint32_t messageLength)
+{
+	assert(bluetooth);
+	assert(messageLength < BLUETOOTH_RECEIVED_DATA_BUFFER);
+
+	bluetooth_interruptBuffer.dataEnd = messageLength;
+
+	if(HAL_UART_Receive_DMA(bluetooth->uart_handler, (uint8_t*)bluetooth_interruptBuffer.receivedData, messageLength) == HAL_OK)
 	{
 		return BLUETOOTH_OK;
 	}
