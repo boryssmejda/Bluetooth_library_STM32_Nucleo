@@ -28,6 +28,19 @@ enum Bluetooth_parity
 	PARITY_EVEN = 2
 };
 
+enum Bluetooth_moduleWorkingState
+{
+	BLUETOOTH_INITIALIZED,
+	BLUETOOTH_READY,
+	BLUETOOTH_PAIRABLE,
+	BLUETOOTH_PAIRED,
+	BLUETOOTH_INQUIRING,
+	BLUETOOTH_CONNECTING,
+	BLUETOOTH_CONNECTED,
+	BLUETOOTH_DISCONNECTED,
+	BLUETOOTH_UNKNOWN
+};
+
 typedef struct
 {
 	uint32_t baudRate: 28;
@@ -45,6 +58,7 @@ typedef struct
 typedef enum Bluetooth_response Bluetooth_response;
 typedef enum Bluetooth_stopBit Bluetooth_stopBit;
 typedef enum Bluetooth_parity Bluetooth_parity;
+typedef enum Bluetooth_moduleWorkingState Bluetooth_moduleWorkingState;
 
 typedef struct bluetooth_handler_t bluetooth_handler_t;
 
@@ -54,6 +68,7 @@ bluetooth_handler_t* bluetooth_init(UART_HandleTypeDef *uart_handler);
 void bluetooth_destroy(bluetooth_handler_t* bluetooth);
 
 Bluetooth_response bluetooth_pingDevice(bluetooth_handler_t *bluetooth);
+Bluetooth_response bluetooth_setUartBaudrate(bluetooth_handler_t* bluetooth, uint32_t newBaudrate);
 
 Bluetooth_response bluetooth_setSerialParameters(bluetooth_handler_t *bluetooth, bluetooth_SerialParameters serialParam);
 Bluetooth_response bluetooth_getSerialParameters(bluetooth_handler_t *bluetooth, bluetooth_SerialParameters *serialParam);
@@ -72,5 +87,7 @@ Bluetooth_response bluetooth_setName(bluetooth_handler_t *bluetooth, char* name)
 
 Bluetooth_response bluetooth_getPassword(bluetooth_handler_t *bluetooth, char* password);
 Bluetooth_response bluetooth_setPassword(bluetooth_handler_t *bluetooth, char* password);
+
+//Bluetooth_response bluetooth_getModuleWorkingState(bluetooth_handler_t *bluetooth, )
 
 #endif

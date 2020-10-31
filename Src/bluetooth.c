@@ -247,6 +247,19 @@ Bluetooth_response bluetooth_pingDevice(bluetooth_handler_t* bluetooth)
 	}
 }
 
+Bluetooth_response bluetooth_setUartBaudrate(bluetooth_handler_t* bluetooth, uint32_t newBaudrate)
+{
+	assert(newBaudrate != 0);
+
+	bluetooth->uart_handler->Instance->CR1 &= ~(USART_CR1_UE);
+	bluetooth->uart_handler->Instance->BRR = UART_BRR_SAMPLING16(HAL_RCC_GetPCLK2Freq(), newBaudrate);
+	bluetooth->uart_handler->Instance->CR1 |= USART_CR1_UE;
+
+	bluetooth->uart_handler->Init.BaudRate = newBaudrate;
+
+	return BLUETOOTH_OK;
+}
+
 Bluetooth_response bluetooth_setSerialParameters(bluetooth_handler_t* bluetooth, bluetooth_SerialParameters serialParam)
 {
 	assert(serialParam.baudRate != 0);
@@ -328,6 +341,31 @@ Bluetooth_response bluetooth_restoreDefaultSettings(bluetooth_handler_t* bluetoo
 	HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*) restoreSettingsResponse, sizeof(restoreSettingsResponse), TIMEOUT);
 
 	if(strcmp(restoreSettingsResponse, OK_RESPONSE) != 0)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	else
+	{
+		return BLUETOOTH_OK;
+	}
+}
+
+Bluetooth_response bluetooth_reset(bluetooth_handler_t *bluetooth)
+{
+	char resetCommand[] = "AT+RESET\r\n";
+	if(HAL_UART_Transmit(bluetooth->uart_handler, (uint8_t*)resetCommand, sizeof(resetCommand), TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+
+	char resetResponse[OK_RESPONSE_SIZE + 1];
+	if(HAL_UART_Receive(bluetooth->uart_handler, (uint8_t*)resetResponse, OK_RESPONSE_SIZE, TIMEOUT) != HAL_OK)
+	{
+		return BLUETOOTH_FAIL;
+	}
+	resetResponse[OK_RESPONSE_SIZE] = '\0';
+
+	if(strcmp(resetResponse, OK_RESPONSE) != 0)
 	{
 		return BLUETOOTH_FAIL;
 	}
